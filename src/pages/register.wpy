@@ -1,0 +1,357 @@
+<style>
+.auth-form {
+  width: 750rpx;
+  height: 100vh;
+  background-color: #eeeeee;
+  /* background-color: #ffffff; */
+}
+
+.userAvatarUrl {
+  width: 150rpx;
+  height: 150rpx;
+  clip-path: circle(50% at center);
+  position: absolute;
+  top: 250rpx;
+  left: 300rpx;
+  right: 300rpx;
+}
+
+.userNickName {
+  top: 400rpx;
+  left: 300rpx;
+  right: 300rpx;
+  width: 150rpx;
+  position: absolute;
+  text-align: center;
+}
+
+.authButton {
+  top: 550rpx;
+  left: 225rpx;
+  right: 225rpx;
+  width: 300rpx;
+  position: absolute;
+}
+
+.tips {
+  font-size: 28rpx;
+  color: #666;
+  padding: 10rpx;
+}
+.width-50 {
+  width: 50%;
+}
+.black-color {
+  color: #000 !important;
+}
+</style>
+
+<template>
+  <view id="register-page" class="container">
+    <view>
+      <view class="tips">您好，请您填写基本信息，完成注册后可查看职位投递方式，我们将对您的信息严格保密，请放心填写</view>
+      <van-cell-group>
+        <van-field id="username" value="{{ username }}" required label="您的姓名" placeholder="请输入姓名" input-align="right" @change="inputValue"/>
+        <!-- <van-cell  @click="showCityPicker"  value="{{ city }}" required title="所在城市" is-link="{{true}}" /> -->
+        <van-field id="city" value="{{ city }}" required label="所在城市" placeholder="请输入所在城市" input-align="right" @change="inputValue" />
+        <van-field id="company" value="{{ company }}" required label="当前公司" placeholder="请输入当前公司" input-align="right" @change="inputValue" />
+        <van-field id="position" value="{{ position }}" required label="当前职位" placeholder="请输入当前职位" input-align="right" @change="inputValue" />
+      </van-cell-group>
+      <!-- <view class="tips">以下信息为选填项目，将有助于我们帮助您职业规划</view> -->
+      <view class="tips"></view>
+      <van-cell-group>
+        <!-- <van-switch-cell title="接收房企招聘信息推送" checked="{{ acceptMsg }}" @change="changeAcceptMsg" active-color="#07c160" border="{{ true }}"/> -->
+        <van-field id="phone" value="{{ phone }}" label="联系电话" placeholder="请输入联系电话"
+          type="number" input-align="right" @change="inputValue">
+          <!-- <van-button slot="button" size="mini" type="primary" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">点击获取</van-button> -->
+        </van-field>
+        <van-cell @click="showSexAction" value="{{ sex }}" title="您的性别" input-align="right"
+          value-class="{{sex != '请选择您的性别' ? 'black-color' : ''}}"
+        />
+        <van-field id="age" value="{{ age }}" label="您的年龄" placeholder="请输入年龄" input-align="right" type="number" @change="inputValue" />
+        <van-field id="currentMonthSalary" value="{{ currentMonthSalary }}" label="当前月薪(万)" placeholder="请输入当前月薪" input-align="right" type="digit" @change="inputValue" />
+        <van-field id="currentYearSalary" value="{{ currentYearSalary }}" label="当前年薪(万)" placeholder="请输入当前年薪" input-align="right" type="digit" @change="inputValue" />
+        <van-field id="expectedYearSalary" value="{{ expectedYearSalary }}" label="期望年薪(万)" placeholder="请输入期望年薪" input-align="right" type="digit" @change="inputValue" />
+        <van-field id="college" value="{{ college }}" label="毕业院校" placeholder="请输入毕业院校" input-align="right" @change="inputValue" />
+        <van-field id="eduction" value="{{ eduction }}" label="最高学历" placeholder="请输入最高学历" input-align="right" @change="inputValue" />
+      </van-cell-group>
+      <view class="tips"></view>
+      <view class="display-flex">
+        <van-button class="width-50" size="large" @click="backToHome">返回列表</van-button>
+        <van-button class="width-50" type="info" size="large" disabled="{{isSubmitting}}" @click="submitRegister">{{submitBtn}}</van-button>
+      </view>
+      <van-action-sheet
+        show="{{ showSelectSex }}"
+        actions="{{ sexActions }}"
+        close-on-click-overlay="{{ true }}"
+        @close="onClose"
+        @select="selectSex"
+      />
+
+      <van-popup
+        show="{{ showSelectCity }}"
+        position="bottom"
+        bind:close="onClose"
+      >
+        <citySelect :cityCode="cityCode"></citySelect>
+      </van-popup>
+
+      <van-popup show="{{ showAuth }}">
+        <view class="auth-form">
+          <view class="userAvatarUrl">
+            <open-data  type="userAvatarUrl"></open-data>
+          </view>
+          <view class="userNickName">
+            <open-data type="userNickName"></open-data>
+          </view>
+          <view class="authButton">
+            <button open-type="getUserInfo" @getuserinfo="bindGetUserInfo">授权登录</button>
+          </view>
+        </view>
+      </van-popup>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import Api from '../config/api.js'
+  import CitySelect from '../components/CitySelect'
+  export default class Register extends wepy.page {
+    config = {
+      navigationBarTitleText: '用户注册',
+      usingComponents: {
+        'van-field': '../vant/field/index',
+        'van-cell': '../vant/cell/index',
+        'van-cell-group': '../vant/cell-group/index',
+        'van-switch-cell': '../vant/switch-cell/index',
+        'van-area': '../vant/area/index',
+        'van-popup': '../vant/popup/index'
+      }
+    }
+
+    components = {
+      citySelect: CitySelect
+    }
+
+    data = {
+      userInfo: null,
+      showAuth: false,
+      isSubmitting: false,
+      submitBtn: '提交完成注册',
+      username: '',
+      sex: '请选择您的性别',
+      city: '',
+      cityCode: '110100',
+      age: '',
+      company: '',
+      position: '',
+      phone: '',
+      currentYearSalary: '',
+      currentMonthSalary: '',
+      expectedYearSalary: '',
+      acceptMsg: true,
+      college: '',
+      eduction: '',
+      showSelectSex: false,
+      sexActions: [
+        { name: '男' },
+        { name: '女' }
+      ],
+      showSelectCity: false,
+      areaList: {}
+    }
+
+    methods = {
+      bindGetUserInfo: function(e) {
+        console.log(e.detail.userInfo)
+        this.userInfo = e.detail.userInfo
+        this.showAuth = false
+        this.username = e.detail.userInfo.nickName
+        // this.sex = e.detail.userInfo.gender === 1 ? '男' : '女'
+        this.$apply()
+      },
+      getPhoneNumber(e) {
+        console.log(e)
+      },
+      inputValue(event) {
+        const value = event.detail
+        const key = event.target.id
+        this[key] = value
+      },
+      showSexAction() {
+        this.showSelectSex = true
+      },
+      showCityPicker() {
+        this.showSelectCity = true
+      },
+      onClose() {
+        this.showSelectSex = false
+        this.showSelectCity = false
+      },
+      selectSex(event) {
+        console.log(event)
+        this.sex = event.detail.name
+        this.showSelectSex = false
+      },
+      changeAcceptMsg() {
+        this.acceptMsg = !this.acceptMsg
+      },
+      backToHome() {
+        wepy.navigateBack({
+          delta: 1
+        })
+      },
+      submitRegister() {
+        if (!this.username || !this.city || !this.company || !this.position) {
+          wepy.showToast({ title: '红色*标选项为必填项，请检查填写', icon: 'none' })
+          return
+        }
+        if (this.currentYearSalary && parseFloat(this.currentYearSalary).toString() !== this.currentYearSalary) {
+          wepy.showToast({ title: '当前薪资请输入数字', icon: 'none' })
+          return
+        }
+        if (this.expectedYearSalary && parseFloat(this.expectedYearSalary).toString() !== this.expectedYearSalary) {
+          wepy.showToast({ title: '期望薪资请输入数字', icon: 'none' })
+          return
+        }
+        this.submitBtn = '正在提交，请稍等...'
+        this.isSubmitting = true
+        if (this.$parent.globalData.firstLogin) {
+          const params = {
+            petName: this.userInfo.nickName,
+            photo_path: this.userInfo.avatarUrl,
+            name: this.username,
+            sex: this.sex === '男',
+            city: this.city,
+            age: this.age,
+            corporation: this.company,
+            job: this.position,
+            push: this.acceptMsg,
+            phone: this.phone,
+            monthlySalary: this.currentMonthSalary,
+            annualSalary: this.currentYearSalary,
+            expectedAnnualSalary: this.expectedYearSalary,
+            college: this.college,
+            eduction: this.eduction
+          }
+          console.log(params)
+          const url = Api.host + Api.user
+          wepy.request({
+            url: url,
+            method: 'POST',
+            data: params
+          }).then(res => {
+            console.log(res.data)
+            if (res.statusCode === 200 && res.data.code === '0') {
+              wepy.showToast({ title: '操作成功，即将调转主页', icon: 'none' })
+              this.$parent.globalData.userInfo = res.data.body.data
+              this.$parent.globalData.firstLogin = false
+              wepy.redirectTo({
+                url: './index'
+              })
+            } else {
+              wepy.showToast({ title: '操作失败，请重试', icon: 'none' })
+              this.submitBtn = '提交完成注册'
+              this.isSubmitting = false
+              this.$apply()
+            }
+          })
+        } else {
+          const params = {
+            name: this.username,
+            sex: this.sex === '男',
+            city: this.city,
+            age: this.age,
+            corporation: this.company,
+            job: this.position,
+            push: this.acceptMsg,
+            phone: this.phone,
+            monthlySalary: this.currentMonthSalary,
+            annualSalary: this.currentYearSalary,
+            expectedAnnualSalary: this.expectedYearSalary,
+            college: this.college,
+            eduction: this.eduction
+          }
+          const url = Api.host + Api.user
+          wepy.request({
+            url: url,
+            method: 'PUT',
+            data: params
+          }).then(res => {
+            console.log(res.data)
+            if (res.statusCode === 200 && res.data.code === '0') {
+              wepy.showToast({ title: '保存个人信息成功', icon: 'none' })
+              this.$parent.globalData.userInfo = res.data.body.data
+              this.$parent.globalData.firstLogin = false
+            } else {
+              wepy.showToast({ title: '保存个人信息失败，请重试', icon: 'none' })
+            }
+            this.submitBtn = '保存个人信息'
+            this.isSubmitting = false
+            this.$apply()
+          })
+        }
+      }
+    }
+
+    events = {
+      'city-select-confirm': (event) => {
+        this.city = event.values[1].name
+        this.cityCode = event.values[1].name
+        this.showSelectCity = false
+      },
+      'city-select-cancel': () => {
+        this.showSelectCity = false
+      }
+    }
+
+    checkAuthSetting() {
+      let self = this
+      wx.getSetting({
+        success: function(res) {
+          if (res.authSetting['scope.userInfo']) {
+            // 已经授权，可以直接调用 getUserInfo 获取头像昵称
+            console.log('已授权')
+            wx.getUserInfo({
+              success (res) {
+                console.log(res.userInfo)
+                // self.sex = res.userInfo.gender === 1 ? '男' : '女'
+                self.username = res.userInfo.nickName
+                self.userInfo = res.userInfo
+                self.$apply()
+              }
+            })
+          } else {
+            self.showAuth = true
+            console.log('未授权')
+          }
+        }
+      })
+    }
+
+    onLoad() {
+      if (this.$parent.globalData.firstLogin) {
+        wepy.showToast({ title: '注册后可查看职位详情', icon: 'none' })
+        this.checkAuthSetting()
+      } else {
+        const userInfo = this.$parent.globalData.userInfo
+        this.username = userInfo.name
+        this.sex = userInfo.sex ? '男' : '女'
+        this.city = userInfo.city
+        this.age = userInfo.age + ''
+        this.company = userInfo.corporation
+        this.job = userInfo.job
+        this.position = userInfo.job
+        this.acceptMsg = userInfo.push
+        this.phone = userInfo.phone
+        this.currentMonthSalary = userInfo.monthlySalary + ''
+        this.currentYearSalary = userInfo.annualSalary + ''
+        this.expectedYearSalary = userInfo.expectedAnnualSalary + ''
+        this.college = userInfo.college
+        this.eduction = userInfo.eduction
+        this.submitBtn = '保存个人信息'
+      }
+    }
+  }
+</script>

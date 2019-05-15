@@ -1,0 +1,580 @@
+<style lang="less">
+  .home-page {
+    height: 100vh;
+    overflow: hidden;
+    background-color: #eeeeee;
+  }
+  .header-options {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 40px;
+    line-height: 40px;
+    background-color: #ffffff;
+    display: flex;
+  }
+  .header-options-item {
+    text-align: center;
+    font-size: 30rpx;
+    display: flex;
+  }
+  .width-25 {
+    width: 25%;
+  }
+  .home-container {
+    position: fixed;
+    bottom: 102rpx;
+    left: 0;
+    right: 0;
+    top: 45px;
+  }
+  .bottom-options {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100rpx;
+    display: flex;
+    text-align: center;
+    border-top: 2rpx solid #eeeeee;
+    line-height: 100rpx;
+    .share-options {
+      width: 150rpx;
+      .image-options {
+        height: 60rpx;
+        width: 60rpx;
+        padding: 20rpx 0;
+      }
+    }
+    button {
+      background-color: #eeeeee !important;
+    }
+    button::after {
+      border: none
+    }
+    .plain {
+      border: none;
+      border-color: transparent;
+    }
+    .button-options {
+      width: 225rpx;
+      background-color: #393e46;
+      color: #ffffff;
+    }
+    .right {
+      border-left: #ffffff solid 2rpx;
+    }
+  }
+  .search-container {
+    width: 650rpx;
+    padding: 5px !important;
+  }
+  .reset-button {
+    width: 100rpx;
+    text-align: center;
+    font-size: 14px;
+  }
+  .job-info-dialog {
+    text-align: center;
+    line-height: 80rpx;
+    overflow:hidden;
+    .job-info-title {
+      border-bottom: #eeeeee solid 2rpx;
+      font-weight: 600;
+      line-height: 50px;
+      font-size: 36rpx;
+    }
+    .job-info-detail {
+      padding: 20rpx 30rpx;
+      line-height: 100rpx;
+      .job-info-detail-item {
+        padding: 0;
+        // border-bottom: #eeeeee 1px solid;
+      }
+      .job-info-tips {
+        font-size: 30rpx;
+        line-height: 60rpx;
+      }
+    }
+  }
+  .share-dialog {
+    text-align: center;
+    .share-photo {
+      width: 620rpx;
+      height: 1080rpx;
+    }
+  }
+  .canvas {
+    width: 640rpx;
+    height: 1020rpx;
+  }
+</style>
+<template>
+  <view class="home-page">
+    <view class="header-options">
+      <!-- <div class="header-options-item width-25">{{company}}</div>
+      <div class="header-options-item width-25" @tap="selectCity">{{city}}</div> -->
+      <div class="header-options-item" style="width: 750rpx; border-left: solid #eeeeee 4rpx;">
+        <van-search
+          value="{{ jobKeyword }}"
+          placeholder="请输入职位/公司/城市关键词"
+          shape="round"
+          bind:change="inputSearch"
+          bind:search="onSearch"
+          bind:clear="onSearch"
+          background="#ffffff"
+          custom-class="search-container"
+          use-action-slot
+        >
+          <view class="blue-color" slot="action" bind:tap="onSearch">搜索</view>
+        </van-search>
+        <view class="blue-color reset-button" slot="action" bind:tap="onReset">重置</view>
+      </div>
+    </view>
+    <scroll-view scroll-y style="height: calc(100vh - 102rpx - 45px)" class="home-container" @scrolltolower="scrolltolower">
+      <view wx:if="{{jobList.length > 0}}">
+        <repeat for="{{jobList}}" item="item">
+          <JobItem :itemValue="item"></JobItem>
+        </repeat>
+      </view>
+      <view wx:if="{{jobList.length == 0 && !loadingMore}}">
+        <EmptyData />
+      </view>
+    </scroll-view>
+    <view class="bottom-options">
+      <button class="share-options" @tap="shareThisItemToOther" open-type="share" >
+        <image class="image-options" src='../images/share.png' />
+      </button>
+      <view class="share-options" @tap="shareToPyq">
+        <image class="image-options" src='../images/pengyouquan.png' />
+      </view>
+      <view class="button-options" @tap="showAbout">涛哥杂谈</view>
+      <view class="button-options right" @tap="gotoPage('./register')">个人中心</view>
+    </view>
+
+    <!-- <van-popup
+      show="{{ showSelectCity }}"
+      position="bottom"
+      bind:close="onClose"
+    >
+      <CitySelect :cityCode="cityCode"></CitySelect>
+    </van-popup> -->
+
+    <van-dialog
+      use-slot
+      closeOnClickOverlay
+      async-close
+      show="{{ showJobInfoContainer }}"
+      show-cancel-button
+      confirmButtonText="保存职位海报"
+      cancelButtonText="复制联系方式"
+      bind:close="onClose"
+      bind:confirm="drawAndShareToPyq"
+      bind:cancel="copyToClipboard"
+    >
+      <view class="job-info-dialog">
+        <view class="job-info-title">当前职位</view>
+        <view class="job-info-detail">
+          <view class="display-flex job-info-detail-item">
+            <view>公司</view>
+            <view class="more-one-line">{{selectJob.corporation}}</view>
+          </view>
+          <view class="display-flex job-info-detail-item">
+            <view>城市</view>
+            <view class="more-one-line">{{selectJob.city}}</view>
+          </view>
+          <view class="display-flex job-info-detail-item">
+            <view>岗位</view>
+            <view class="more-one-line">{{selectJob.job}}</view>
+          </view>
+          <view class="display-flex job-info-detail-item">
+            <view>邮箱</view>
+            <view class="red-color-e84545 more-one-line">{{selectJob.contact}}</view>
+          </view>
+          <view class="job-info-tips grey-color-666666" style="padding-top: 10rpx;">简历及邮件标题格式</view>
+          <view class="job-info-tips grey-color-666666">应聘XX岗位-姓名-城市-涛哥杂谈推荐</view>
+        </view>
+      </view>
+    </van-dialog>
+    <van-dialog
+      use-slot
+      closeOnClickOverlay
+      async-close
+      show="{{ showShareContainer }}"
+      show-cancel-button
+      confirmButtonText="保存图片"
+      cancelButtonText="返回列表"
+      bind:close="onClose"
+      @confirm="saveImage('share')"
+      bind:cancel="onClose"
+    >
+      <view class="share-dialog">
+        <image class="share-photo" src="../images/share.jpg" />
+      </view>
+    </van-dialog>
+
+
+    <van-dialog
+      use-slot
+      closeOnClickOverlay
+      async-close
+      show="{{ showAboutContainer }}"
+      show-cancel-button
+      confirmButtonText="保存图片"
+      cancelButtonText="返回列表"
+      bind:close="onClose"
+      @confirm="saveImage('about')"
+      bind:cancel="onClose"
+    >
+      <view class="share-dialog">
+        <image class="share-photo" src="../images/about.jpg" />
+      </view>
+    </van-dialog>
+
+    <van-dialog
+      use-slot
+      closeOnClickOverlay
+      async-close
+      show="{{ isDrawImage }}"
+      show-cancel-button
+      confirmButtonText="保存"
+      cancelButtonText="取消"
+      bind:close="onClose"
+      bind:confirm="saveDrawImage"
+      bind:cancel="onClose"
+      transition="fade"
+    >
+      <view class="canvas">
+        <canvas class="canvas" canvas-id="myCanvas"></canvas>
+      </view>
+    </van-dialog>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import Api from '../config/api.js'
+  import JobItem from '../components/JobItem'
+  // import CitySelect from '../components/CitySelect'
+  import EmptyData from '../components/EmptyData'
+  // import Dialog from '../vant/dialog/dialog'
+
+  export default class Index extends wepy.page {
+    config = {
+      // navigationBarTitleText: 'test'
+      // enablePullDownRefresh: true,
+      usingComponents: {
+        'van-area': '../vant/area/index',
+        'van-popup': '../vant/popup/index',
+        'van-search': '../vant/search/index'
+      }
+    }
+    components = {
+      JobItem,
+      // CitySelect,
+      EmptyData
+    }
+
+    data = {
+      page: 1,
+      mynum: 20,
+      userInfo: null,
+      showSelectCity: false,
+      cityCode: '',
+      city: '全部城市',
+      selectJob: {},
+      showJobInfoContainer: false,
+      showShareContainer: false,
+      showAboutContainer: false,
+      jobList: [],
+      company: '全部',
+      jobKeyword: '',
+      isDrawImage: false,
+      loadingMore: true
+    }
+
+    methods = {
+      shareThisItemToOther: function() {
+        this.onShareAppMessage()
+      },
+      shareToPyq() {
+        this.showShareContainer = true
+      },
+      showAbout () {
+        this.showAboutContainer = true
+      },
+      onClose() {
+        this.showSelectCity = false
+        this.showJobInfoContainer = false
+        this.showShareContainer = false
+        this.showAboutContainer = false
+        this.isDrawImage = false
+        this.$apply()
+      },
+      selectCity: function() {
+        this.showSelectCity = true
+        this.$apply()
+      },
+      gotoPage: function(page) {
+        wepy.navigateTo({
+          url: page
+        })
+      },
+      copyToClipboard () {
+        wepy.setClipboardData({
+          data: this.selectJob.contact,
+          success(res) {
+            console.log(res)
+          }
+        })
+      },
+      inputSearch (event) {
+        this.jobKeyword = event.detail
+      },
+      onSearch () {
+        this.jobList = []
+        this.page = 1
+        this.getSalaryList()
+      },
+      onReset () {
+        this.jobKeyword = ''
+        this.jobList = []
+        this.page = 1
+        this.getSalaryList()
+      },
+      saveImage (name) {
+        wepy.showLoading({
+          title: '正在保存图片...',
+          mask: true
+        })
+        let url = 'https://tgzt-1258803745.cos.ap-guangzhou.myqcloud.com/image/share.jpg'
+        if (name === 'about') {
+          url = 'https://tgzt-1258803745.cos.ap-guangzhou.myqcloud.com/image/about.jpg'
+        }
+        wepy.downloadFile({
+          url: url
+        }).then(res => {
+          console.log(res)
+          if (res.statusCode === 200) {
+            this.$parent.saveImageToPhotosAlbum(res.tempFilePath)
+          } else {
+            wepy.showToast({
+              title: '保存失败，请重试！',
+              icon: 'none',
+              duration: 2000
+            })
+          }
+          wepy.hideLoading()
+        })
+      },
+      drawAndShareToPyq () {
+        this.showJobInfoContainer = false
+        this.isDrawImage = true
+        wepy.showLoading({
+          title: '正在生成图片...',
+          mask: true
+        })
+        this.drawImage()
+      },
+      saveDrawImage () {
+        const that = this
+        wx.canvasToTempFilePath({
+          x: 0,
+          y: 0,
+          canvasId: 'myCanvas',
+          success: function (res) {
+            console.log('朋友圈分享图生成成功:' + res.tempFilePath)
+            that.$parent.saveImageToPhotosAlbum(res.tempFilePath)
+          },
+          fail: function (err) {
+            wepy.showToast({
+              title: '生成分享图片失败，请重试',
+              icon: 'none',
+              duration: 2000
+            })
+            console.log(err)
+          }
+        })
+      },
+      scrolltolower () {
+        if (this.loadingMore || this.jobList.length % 20 !== 0) {
+          return
+        }
+        this.loadingMore = true
+        this.onReachBottom()
+      }
+    }
+
+    events = {
+      'city-select-confirm': (event) => {
+        this.city = event.values[1].name
+        this.cityCode = event.values[1].name
+        this.showSelectCity = false
+        this.getSalaryList()
+      },
+      'city-select-cancel': () => {
+        this.showSelectCity = false
+      },
+      'show-job-info-dialog': (event) => {
+        console.log(event)
+        if (this.$parent.globalData.firstLogin) {
+          wepy.navigateTo({
+            url: './register'
+          })
+        } else {
+          const url = Api.host + Api.look
+          wepy.request({
+            url: url
+          })
+          this.showJobInfoContainer = true
+          this.selectJob = event
+        }
+      }
+    }
+
+    onShareAppMessage() {
+      return {
+        title: '涛哥杂谈地产招聘',
+        desc: '',
+        path: 'pages/index'
+      }
+    }
+
+    onReachBottom() {
+      this.page = this.page + 1
+      this.$apply()
+      this.getSalaryList()
+    }
+
+    getSalaryList() {
+      let url = Api.host + Api.salary + '?limit=20&start=' + this.page
+      if (this.jobKeyword) {
+        let temp = this.jobKeyword.trim()
+        let tempArray = temp.split(' ')
+        let arg = 0
+        let tempResult = ''
+        tempArray.map(item => {
+          if (item) {
+            tempResult += ' ' + item
+            arg++
+          }
+        })
+        if (arg > 5) {
+          this.jobList = []
+          this.$apply()
+          return
+        }
+        url += '&temp=' + tempResult.trim() + '&arg=' + arg
+      }
+      wepy.request({
+        url: url
+      }).then(res => {
+        if (res.statusCode === 200 && res.data.code === '0') {
+          let result = res.data.body.data
+          for (let salary of result) {
+            if (salary.publicTime !== null && salary.publicTime !== '') {
+              const publicTime = new Date(salary.publicTime)
+              const month = publicTime.getMonth() + 1 < 10 ? '0' + (publicTime.getMonth() + 1) : publicTime.getMonth() + 1
+              salary.createTime = publicTime.getFullYear() + '-' + month + '-' + publicTime.getDate()
+            }
+          }
+          this.jobList = this.jobList.concat(result)
+          this.loadingMore = false
+          this.$apply()
+        }
+      })
+    }
+
+    drawImage() {
+      const ctx = wx.createCanvasContext('myCanvas')
+      const bgPath = '../images/share_bg.jpg'
+      const windowWidth = wx.getSystemInfoSync().windowWidth * 0.85
+      const windowHeight = wx.getSystemInfoSync().windowWidth * 0.85 * 1.6
+
+      let yOffset = windowHeight * 0.53
+      // 设置背景色为白色
+      // ctx.setFillStyle('White')
+      // ctx.fillRect(0, 0, windowWidth, windowHeight)
+
+      // 绘制背景
+      ctx.drawImage(bgPath, 0, 0, windowWidth, windowHeight)
+      // 绘制公司
+      // ctx.setFillStyle('#e65454')
+      ctx.setFontSize(16)
+      ctx.setTextAlign('left')
+      ctx.fillText('公司：' + this.selectJob.corporation, windowWidth * 0.1, yOffset)
+      yOffset += 21
+      // 绘制城市
+      // ctx.setFillStyle('#e65454')
+      ctx.setFontSize(16)
+      ctx.setTextAlign('left')
+      ctx.fillText('城市：' + this.selectJob.city, windowWidth * 0.1, yOffset)
+      yOffset += 21
+      // 绘制岗位
+      // ctx.setFillStyle('#e65454')
+      ctx.setFontSize(16)
+      ctx.setTextAlign('left')
+      ctx.fillText('岗位：' + this.selectJob.job, windowWidth * 0.1, yOffset)
+      yOffset += 21
+      // 绘制邮箱
+      // ctx.setFillStyle('#e65454')
+      ctx.setFontSize(16)
+      ctx.setTextAlign('left')
+      ctx.fillText('邮箱：' + this.selectJob.contact, windowWidth * 0.1, yOffset)
+      yOffset += 21
+
+      ctx.draw()
+      wepy.hideLoading()
+    }
+
+    checkUserLogin(code) {
+      const url = Api.host + Api.login + '/' + code
+      console.log(url)
+      wepy.request({
+        url: url
+      }).then(res => {
+        console.log(res.data)
+        wepy.hideLoading()
+        const token = res.data.body.token
+        this.$parent.globalData.token = token
+        // if (res.data.code === '101') {
+          // wepy.navigateTo({
+          //   url: './register'
+          // })
+          // this.getSalaryList()
+          // this.$apply()
+          // wepy.redirectTo({
+          //   url: './register'
+          // })
+        // } else
+        if (res.data.code === '0') {
+          console.log(res.data.body.data)
+          this.userInfo = res.data.body.data
+          this.$parent.globalData.userInfo = res.data.body.data
+          this.$parent.globalData.firstLogin = false
+          // if (this.toOptions.to === 'salaryInfo' && this.toOptions.salaryId) {
+          //   wepy.navigateTo({
+          //     url: '../salary/salaryInfo?id=' + this.toOptions.salaryId
+          //   })
+          // }
+        }
+        this.getSalaryList()
+        this.$apply()
+      })
+    }
+
+    onLoad(options) {
+      this.toOptions = options
+      if (this.$parent.globalData.firstLogin) {
+        wepy.showLoading({
+          title: '加载中'
+        })
+      }
+      wepy.login().then(res => {
+        console.log(res)
+        this.checkUserLogin(res.code)
+      })
+    }
+  }
+</script>

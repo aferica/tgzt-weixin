@@ -1,0 +1,55 @@
+<style scoped>
+</style>
+
+<template>
+  <van-area area-list="{{ areaList }}" columns-num="{{ columnsNum }}" title="选择城市"
+    value="{{cityCode}}" @confirm="selectCity" @cancel="onClose"
+  />
+</template>
+<script>
+  import wepy from 'wepy'
+  import Api from '../config/api.js'
+  export default class CitySelect extends wepy.component {
+    data = {
+      areaList: {}
+    }
+
+    props = {
+      cityCode: {
+        type: String,
+        default: '110100'
+      },
+      columnsNum: {
+        type: Number,
+        default: 2
+      }
+    }
+
+    methods = {
+      onClose() {
+        this.$emit('city-select-cancel')
+      },
+      selectCity(event) {
+        this.$emit('city-select-confirm', event.detail)
+      }
+    }
+
+    getAreaList() {
+      const url = Api.host + Api.city
+      wepy.request({
+        url: url
+      }).then(res => {
+        if (res.statusCode === 200) {
+          if (res.data.code === 0) {
+            this.areaList = res.data.data
+            this.$apply()
+          }
+        }
+      })
+    }
+
+    onLoad() {
+      this.getAreaList()
+    }
+  }
+</script>

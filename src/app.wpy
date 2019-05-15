@@ -1,0 +1,150 @@
+<style lang="less">
+.container {
+  width: 100%;
+  background-color: #eeeeee;
+  min-height: 100vh;
+}
+.van-dialog {
+  max-width: 620rpx !important;
+}
+.theme-color {
+  color: #222831;
+}
+.red-color-e84545 {
+  color: #e84545;
+}
+.red-color-f6416c {
+  color: #f6416c;
+}
+.red-color-e23e57 {
+  color: #e23e57;
+}
+.grey-color-666666 {
+  color: #666666;
+}
+.grey-color-eeeeee {
+  color: #eeeeee;
+}
+.font-weight-600 {
+  font-weight: 600;
+}
+.display-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.more-one-line {
+  max-width: 70%;
+  line-height: 40rpx;
+  text-align: right;
+  word-wrap: break-word;
+}
+.red-color {
+  color: #f44;
+}
+.blue-color {
+  color: #1989fa;
+}
+.van-button--info {
+  background-color: #ffffff;
+  color: #1989fa;
+  border:1px solid #eee;
+}
+</style>
+
+<script>
+import wepy from 'wepy'
+import 'wepy-async-function'
+
+let env = 'dev'
+env = 'prod'
+if (env === 'prod') {
+  console.log = () => {}
+  console.info = () => {}
+}
+
+export default class extends wepy.app {
+  config = {
+    pages: [
+      'pages/index',
+      'pages/register',
+      'pages/taoge'
+    ],
+    window: {
+      backgroundTextStyle: 'light',
+      navigationBarBackgroundColor: '#222831',
+      navigationBarTitleText: '涛哥杂谈',
+      navigationBarTextStyle: 'white',
+      backgroundColor: '#222831'
+    },
+    usingComponents: {
+      'van-icon': './vant/icon/index',
+      'van-action-sheet': './vant/action-sheet/index',
+      'van-dialog': './vant/dialog/index',
+      'van-button': './vant/button/index'
+    }
+  }
+
+  globalData = {
+    userInfo: null,
+    token: '',
+    firstLogin: true
+  }
+
+  constructor () {
+    super()
+    this.use('requestfix')
+    this.use('promisify')
+
+    // 配置拦截器
+    this.intercept('request', {
+      config(p) {
+        console.log('拦截config:', p)
+        p.header = { 'content-type': 'application/json;charset=UTF-8' }
+        if (p.url.indexOf('token') === -1) {
+          if (p.url.indexOf('?') === -1) {
+            p.url = p.url + `?token=${this.globalData.token}`
+          } else {
+            p.url = p.url + `&token=${this.globalData.token}`
+          }
+        }
+        return p
+      },
+      success(p) {
+        // let pages = getCurrentPages()
+        console.log('拦截success:', p)
+        return p
+      },
+      fail(p) {
+        return p
+      }
+    })
+  }
+
+  onLaunch() {
+  }
+
+  getUserInfo(cb) {
+    wepy.getUserInfo({
+      success (res) {
+        this.globalData.userInfo = res.userInfo
+        cb && cb(res.userInfo)
+      }
+    })
+  }
+
+  saveImageToPhotosAlbum(filePath) {
+    wx.saveImageToPhotosAlbum({
+      filePath: filePath,
+      success(res) {
+        console.log(res)
+        // wepy.showToast({ title: '保存成功！', icon: 'none' })
+      },
+      fail(err) {
+        console.log(err)
+        wepy.showToast({ title: '保存失败，请重试！', icon: 'none' })
+      }
+    })
+  }
+}
+</script>

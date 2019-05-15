@@ -1,0 +1,13 @@
+{
+  "description": "涛哥杂谈地产招聘小程序",
+  "setting": {
+    "urlCheck": true,
+    "es6": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "miniprogram",
+  "appid": "wx88295c4357668c53",
+  "projectname": "tgzt",
+  "miniprogramRoot": "./dist"
+}

@@ -1,0 +1,33 @@
+<style scoped>
+  .job-item-container {
+    padding: 20rpx;
+    background-color: #ffffff;
+    border-bottom: 2rpx solid #eeeeee;
+  }
+  .job-item-row {
+    display: flex;
+    justify-content: space-between;
+    line-height: 50rpx;
+    font-size: 32rpx;
+  }
+  .other-info {
+    font-size: 28rpx;
+  }
+</style>
+
+<template>
+  <view class="job-item-container">
+
+  </view>
+</template>
+<script>
+  import wepy from 'wepy'
+  export default class JobItem extends wepy.component {
+    props = {
+      jobInfo: Object
+    }
+    methods = {
+
+    }
+  }
+</script>
